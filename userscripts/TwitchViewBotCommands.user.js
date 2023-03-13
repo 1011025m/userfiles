@@ -2,10 +2,10 @@
 // @name        View Twitch Commands In Chat
 // @namespace   https://github.com/1011025m
 // @match       https://www.twitch.tv/*
-// @version     0.2
+// @version     0.3
 // @author      1011025m
 // @description See all the available bot commands from popular bots that broadcasters use, from the comfort of your Twitch chat!
-// @icon        https://www.streamscheme.com/wp-content/uploads/2020/04/mrdestructoid.png
+// @icon        https://i.imgur.com/q4rNQOb.png
 // @license     MIT
 // @unwrap
 // ==/UserScript==
@@ -54,7 +54,9 @@
         cursor:pointer;
         background-color: var(--color-fill-button-icon);
         mask-size: contain;
+        -webkit-mask-size: contain;
         mask-image: url('https://i.imgur.com/Hpn6NZm.png');
+        -webkit-mask-image: url('https://i.imgur.com/Hpn6NZm.png');
     }
 
     .viewchatcommands-panel {
@@ -313,7 +315,6 @@
 
         async getFrom(bot) {
             if (bot in knownBots && bot in this.id) {
-                this.isBotConnected(bot)
                 const botInfo = knownBots[bot]
                 await fetch(botInfo.get_cmds(this.id[bot])[0], botInfo.get_cmds(this.id[bot])[1])
                 .then(async resp => {
@@ -344,27 +345,28 @@
         }
 
         async isBotConnected(bot) {
-            // Currently this fetches once for every bot it needs to check. Wasteful, will fix later.
             if (bot in this.bot_status) { return this.bot_status[bot] }
             let isConnected = false
             let roleOfBot = undefined
             // There's an undocumented Twitch IRC server endpoint that returns usersnames, all in lowercase
             // The endpoint itself doesn't support CORS, BRUH!!!!
             // Using Cloudflare Workers to alleviate the issue
-            // await fetch(`http://localhost:8787/${this.channel}`)
-            await fetch(`https://twitch-tmi.1011025m.workers.dev/${this.channel}`)
-            .then(async resp => {
-                if (resp.status === 200) {
-                    await resp.json().then(data => {
-                        for (const role in data.chatters) {
-                            if (data.chatters[role].includes(bot.toLowerCase())) {
-                                isConnected = true
-                                roleOfBot = (role.slice(-1) === 's' ? role.slice(0, -1): role) // Plural to singular
-                            }
-                        }
-                    })
+            if (!this.viewer_list) {
+                await fetch(`https://twitch-tmi.1011025m.workers.dev/${this.channel}`)
+                .then(async resp => {
+                    if (resp.status === 200) {
+                        await resp.json().then(data => {
+                            this.viewer_list = data
+                        })
+                    }
+                })
+            }
+            for (const role in this.viewer_list.chatters) {
+                if (this.viewer_list.chatters[role].includes(bot.toLowerCase())) {
+                    isConnected = true
+                    roleOfBot = (role.slice(-1) === 's' ? role.slice(0, -1): role) // Plural to singular
                 }
-            })
+            }
             const status = { connected: isConnected, role: roleOfBot }
             this.bot_status[bot] = status
             return status
@@ -384,7 +386,6 @@
     }
 
     async function createBotWarning(panelGroupElem, msg) {
-        // I AM LAZY
         console.log(msg)
         const botWarningModal = document.createElement('div')
         botWarningModal.classList.add('viewchatcommands-panel__group-warning')
@@ -449,7 +450,6 @@
         await checkBotCommands(currChannelName)
 
         // Render the commands in groups
-        loadingPlaceholder.remove()
         const listSearchRegion = document.createElement('div')
         listSearchRegion.classList.add('viewchatcommands-panel__group')
         listSearchRegion.classList.add('filter')
@@ -527,6 +527,12 @@
                 commandWrapper.append(commandMessage)
             }
         }
+
+        // Remove loading container
+        loadingPlaceholder.remove()
+
+        // Garbage collect the viewer list
+        visitedChannels[currChannelName].viewer_list = null
 
         commandSearchBar.oninput = async () => {
             await filterCommandList(commandSearchBar.value)
