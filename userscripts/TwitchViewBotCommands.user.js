@@ -2,7 +2,7 @@
 // @name        View Twitch Commands In Chat
 // @namespace   https://github.com/1011025m
 // @match       https://www.twitch.tv/*
-// @version     0.3
+// @version     0.4
 // @author      1011025m
 // @description See all the available bot commands from popular bots that broadcasters use, from the comfort of your Twitch chat!
 // @icon        https://i.imgur.com/q4rNQOb.png
@@ -225,7 +225,10 @@
             cmd_name_key: 'name',
 
             // Same as above, except for the response.
-            cmd_msg_key: 'message'
+            cmd_msg_key: 'message',
+
+            // Optional. Use this if prefix must be used for commands.
+            enforced_prefix: '!'
         }
         */
         Nightbot: {
@@ -262,6 +265,15 @@
             cmd_name_key: 'identifier',
             cmd_msg_key: 'response'
         },
+        Streamlabs: { // Also called Cloudbot
+            // CORS issue, same cloudflare workers trick
+            icon: 'https://static-cdn.jtvnw.net/jtv_user_pictures/68445d99-b612-463c-a3d1-125283adcbf3-profile_image-50x50.png',
+            get_id: (channel) => { return [`https://cloudbot-cors.1011025m.workers.dev/user/${channel}`] },
+            get_cmds: (id) => { return [`https://cloudbot-cors.1011025m.workers.dev/commands/${id}`] },
+            id_key: 'token', // Same with StreamElements, not inside an object.
+            cmd_name_key: 'command',
+            cmd_msg_key: 'response'
+        }
         /*
         // Add support for Supibot later
         Supibot: {
@@ -322,7 +334,7 @@
                         await resp.json().then(async data => {
                             if ('commands' in data) this.cmds[bot] = data.commands // Nightbot, Fossabot
                             else if ('list' in data) this.cmds[bot] = data.list // Moobot
-                            else { // StreamElements
+                            else { // StreamElements, Cloudbot
                                 this.cmds[bot] = data 
                                 console.warn(`${bot} did not return commands...`)
                             }
@@ -508,7 +520,7 @@
 
             // Render each command
             for (const cmd of currChannelCommands[botcmds]) {
-                if (cmd.enabled === false) {continue}
+                if (cmd.enabled === false || !cmd[knownBots[botcmds].cmd_msg_key]) {continue}
                 const commandWrapper = document.createElement('div')
                 commandWrapper.classList.add('command-wrapper')
                 const commandName = document.createElement('div')
