@@ -7,6 +7,9 @@
 // @description See all the available bot commands from popular bots that broadcasters use, from the comfort of your Twitch chat!
 // @icon        https://i.imgur.com/q4rNQOb.png
 // @license     MIT
+// @home        https://github.com/1011025m/userfiles
+// @updateURL   https://github.com/1011025m/userfiles/blob/main/userscripts/TwitchViewBotCommands.user.js
+// @downloadURL https://github.com/1011025m/userfiles/blob/main/userscripts/TwitchViewBotCommands.user.js
 // @unwrap
 // ==/UserScript==
 
