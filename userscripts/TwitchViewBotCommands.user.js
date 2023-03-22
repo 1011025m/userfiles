@@ -2,7 +2,7 @@
 // @name        View Twitch Commands In Chat
 // @namespace   https://github.com/1011025m
 // @match       https://www.twitch.tv/*
-// @version     0.5
+// @version     0.6
 // @author      1011025m
 // @description See all the available bot commands from popular bots that broadcasters use, from the comfort of your Twitch chat!
 // @icon        https://i.imgur.com/q4rNQOb.png
@@ -169,6 +169,7 @@
 
     .viewchatcommands-loading {
         position: absolute;
+        top: 0;
         display: flex;
         height: 100%;
         width: 100%;
@@ -475,8 +476,14 @@
         commandSearchBar.placeholder = 'Filter'
         listSearchRegion.append(commandSearchBar)
 
-        const currChannelCommands = visitedChannels[currChannelName].cmds
-        for (const botcmds in currChannelCommands) {
+        const currChannelCmds = visitedChannels[currChannelName].cmds
+        for (const bot in currChannelCmds) {
+            // Cloudbot: Even if broadcaster does not use the bot, 
+            // if authenticated with Streamlabs, there will still be default commands.
+            // Skip it entirely if only the moderator (default) commands are found.
+            if (bot === "Streamlabs" && currChannelCmds[bot].filter(c => c[knownBots[bot].cmd_msg_key]).length === 0) {
+                continue
+            }
             // Initialize group for each bot
             const individualBotListRegion = document.createElement('div')
             individualBotListRegion.classList.add('viewchatcommands-panel__group')
@@ -485,12 +492,12 @@
             // Make header
             const botListRegionHeaderText = document.createElement('div')
             botListRegionHeaderText.classList.add('viewchatcommands-panel__group-header')
-            botListRegionHeaderText.innerText = botcmds
+            botListRegionHeaderText.innerText = bot
             individualBotListRegion.append(botListRegionHeaderText)
             // Make icon
             const botIcon = document.createElement('div')
             botIcon.classList.add('icon')
-            botIcon.style.backgroundImage = `url('${knownBots[botcmds].icon}')`
+            botIcon.style.backgroundImage = `url('${knownBots[bot].icon}')`
             botListRegionHeaderText.prepend(botIcon)
             // Make toggle button
             const toggleVisibilityButton = document.createElement('button')
@@ -507,13 +514,13 @@
             }
 
             // Create warning if criteria is met
-            let { connected, role } = await visitedChannels[currChannelName].isBotConnected(botcmds)
-            console.log(botcmds)
+            let { connected, role } = await visitedChannels[currChannelName].isBotConnected(bot)
+            console.log(bot)
             if (!connected) {
                 await createBotWarning(individualBotListRegion, botWarnings.notConnectedToChannel)
                 individualBotListRegion.classList.add('hidden')
             }
-            else if (currChannelCommands[botcmds].length === 0) {
+            else if (currChannelCmds[bot].length === 0) {
                 await createBotWarning(individualBotListRegion, botWarnings.connectedToAccountNoCommands)
                 individualBotListRegion.classList.add('hidden')
             }
@@ -522,21 +529,21 @@
             }
 
             // Render each command
-            for (const cmd of currChannelCommands[botcmds]) {
-                if (cmd.enabled === false || !cmd[knownBots[botcmds].cmd_msg_key]) {continue}
+            for (const cmd of currChannelCmds[bot]) {
+                if (cmd.enabled === false || !cmd[knownBots[bot].cmd_msg_key]) continue
                 const commandWrapper = document.createElement('div')
                 commandWrapper.classList.add('command-wrapper')
                 const commandName = document.createElement('div')
                 commandName.classList.add('command-name')
-                if (knownBots[botcmds].hasOwnProperty('enforced_prefix')) {
-                    commandName.innerText = `${knownBots[botcmds].enforced_prefix}${cmd[knownBots[botcmds].cmd_name_key]}:`
+                if (knownBots[bot].hasOwnProperty('enforced_prefix')) {
+                    commandName.innerText = `${knownBots[bot].enforced_prefix}${cmd[knownBots[bot].cmd_name_key]}:`
                 }
                 else {
-                    commandName.innerText = `${cmd[knownBots[botcmds].cmd_name_key]}:`
+                    commandName.innerText = `${cmd[knownBots[bot].cmd_name_key]}:`
                 }
                 const commandMessage = document.createElement('div')
                 commandMessage.classList.add('command-message')
-                commandMessage.innerText = `${cmd[knownBots[botcmds].cmd_msg_key]}`
+                commandMessage.innerText = `${cmd[knownBots[bot].cmd_msg_key]}`
                 individualBotListRegion.append(commandWrapper)
                 commandWrapper.append(commandName)
                 commandWrapper.append(commandMessage)
@@ -587,20 +594,31 @@
 
     // Run
     let currChannelName = null
-    let visitedChannels = {} // Storage for all the BotCommands objects, in case user switches back and forth between channels.
+    // Storage for all the BotCommands objects, 
+    // in case user switches back and forth between channels.
+    let visitedChannels = {} 
     console.log('Monitoring channel change')
 
     async function checkChannelName() {
         // channelName is given in the Twitch interface (unreliable)
         const currURL = document.URL
-        const channelNameRegEx = /(?<=\/popout\/|\/embed\/)(.+?)(?=\/chat)/.exec(currURL) || /(?<=twitch.tv\/)(.+?)(?=[\/\?]|$)/.exec(currURL)
-        if (channelNameRegEx == null || noCheckNames.includes(channelNameRegEx[0])) {
-            currChannelName = null
-        } else if (currChannelName !== channelNameRegEx[0]) { 
-            console.log(`Channel changed to ${channelNameRegEx[0]}`)
-            currChannelName = channelNameRegEx[0]
-            injectViewCommandsButton()
+        const channelNameRegEx = [
+            /(?<=twitch.tv\/)(.+?)(?=[\/\?]|$)/,
+            /(?<=\/popout\/|\/embed\/|\/moderator\/)(.+?)(?=\/chat|\/|$)/
+        ]
+        for (const re of channelNameRegEx) {
+            const reExec = re.exec(currURL)
+            if (reExec === null) continue
+            if (noCheckNames.includes(reExec[0])) { currChannelName = null; return }
+            if (currChannelName !== reExec[0]) { 
+                console.log(`Channel changed to ${reExec[0]}`)
+                currChannelName = reExec[0]
+                injectViewCommandsButton()
+                return
+            }
         }
     }
-    setInterval(checkChannelName, 2000);
+    // 7TV 3.0 lazy compatibility fix
+    // Wait for it to load first
+    setTimeout(() => setInterval(checkChannelName, 2000), 5500)
 })()
