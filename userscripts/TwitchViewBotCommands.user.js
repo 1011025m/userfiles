@@ -2,14 +2,14 @@
 // @name        View Twitch Commands In Chat
 // @namespace   https://github.com/1011025m
 // @match       https://www.twitch.tv/*
-// @version     0.4
+// @version     0.5
 // @author      1011025m
 // @description See all the available bot commands from popular bots that broadcasters use, from the comfort of your Twitch chat!
 // @icon        https://i.imgur.com/q4rNQOb.png
 // @license     MIT
 // @home        https://github.com/1011025m/userfiles
-// @updateURL   https://github.com/1011025m/userfiles/blob/main/userscripts/TwitchViewBotCommands.user.js
-// @downloadURL https://github.com/1011025m/userfiles/blob/main/userscripts/TwitchViewBotCommands.user.js
+// @updateURL   https://github.com/1011025m/userfiles/raw/main/userscripts/TwitchViewBotCommands.user.js
+// @downloadURL https://github.com/1011025m/userfiles/raw/main/userscripts/TwitchViewBotCommands.user.js
 // @unwrap
 // ==/UserScript==
 
