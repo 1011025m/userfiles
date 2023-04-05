@@ -2,7 +2,7 @@
 // @name        View Twitch Commands In Chat
 // @namespace   https://github.com/1011025m
 // @match       https://www.twitch.tv/*
-// @version     0.6
+// @version     0.7
 // @author      1011025m
 // @description See all the available bot commands from popular bots that broadcasters use, from the comfort of your Twitch chat!
 // @icon        https://i.imgur.com/q4rNQOb.png
@@ -302,6 +302,43 @@
         notModerator: "This bot is not a moderator of this channel's chat, some commands may not work."
     }
 
+    const getChatterList = async (channelName) => {
+        // Twitch GQL request data
+        const payload = {
+            "operationName": "ChatViewers",
+            "variables": {
+                "channelLogin": channelName,
+            },
+            "extensions": {
+                "persistedQuery": {
+                    "version": 1,
+                    "sha256Hash": "e0761ef5444ee3acccee5cfc5b834cbfd7dc220133aa5fbefe1b66120f506250"
+                }
+            }
+        }
+
+        // Send the request
+        const res = await fetch('https://gql.twitch.tv/gql', {
+            method: 'POST',
+            cache: 'no-cache',
+            headers: {"Client-Id": "kimne78kx3ncx6brgo4mv6wki5h1ko"},
+            body: JSON.stringify(payload)
+
+        })
+
+        if (res.status === 200) {
+            const resChatters = (await res.json()).data.channel.chatters
+
+            let chattersArr = {}
+            for (const role in resChatters) {
+                if (role === "count" || role === "__typename") continue
+                chattersArr[role] = resChatters[role].map(user => user.login)
+            }
+    
+            return {chatters: chattersArr}
+        }
+    }
+
     class BotCommands {
         constructor(channel) {
             this.channel = channel
@@ -368,14 +405,7 @@
             // The endpoint itself doesn't support CORS, BRUH!!!!
             // Using Cloudflare Workers to alleviate the issue
             if (!this.viewer_list) {
-                await fetch(`https://twitch-tmi.1011025m.workers.dev/${this.channel}`)
-                .then(async resp => {
-                    if (resp.status === 200) {
-                        await resp.json().then(data => {
-                            this.viewer_list = data
-                        })
-                    }
-                })
+                this.viewer_list = await getChatterList(this.channel)
             }
             for (const role in this.viewer_list.chatters) {
                 if (this.viewer_list.chatters[role].includes(bot.toLowerCase())) {
