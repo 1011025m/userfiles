@@ -2,7 +2,7 @@
 // @name        View Twitch Commands In Chat
 // @namespace   https://github.com/1011025m
 // @match       https://www.twitch.tv/*
-// @version     0.7
+// @version     0.8
 // @author      1011025m
 // @description See all the available bot commands from popular bots that broadcasters use, from the comfort of your Twitch chat!
 // @icon        https://i.imgur.com/q4rNQOb.png
@@ -13,12 +13,12 @@
 // @unwrap
 // ==/UserScript==
 
+// TODO: :has() operator does not work on Firefox
+// NOTE: Above works starting with Firefox 121 - release in Dec 2023!
 (() => {
     'use strict'
 
     const viewchatcommands_styles = document.createElement("style")
-    // Some of this is taken from 7TV
-    // Otherwise copied from Twitch to match the styling
     viewchatcommands_styles.innerText = `
     .viewchatcommands-button {
         cursor:pointer !important;
@@ -76,6 +76,7 @@
         border-bottom: var(--border-width-default) solid var(--color-border-base) !important;
     }
 
+    /* The Twitch dev who switched this to box-shadow should be fired! */
     .viewchatcommands-panel__input {
         outline: none;
         width: 100%;
@@ -83,19 +84,20 @@
         height: var(--input-size-default);
         font-size: var(--input-text-default);
         color: var(--color-text-input);
-        border: var(--border-width-input) solid;
-        border-color: transparent;
+        border: 0;
         border-radius: var(--border-radius-medium);
+        box-shadow: inset 0 0 0 var(--border-width-input-small) var(--color-border-input);
         background-color: var(--color-background-input);
-        transition: border-color var(--timing-short) ease-in, background-color var(--timing-short) ease-in;
+        transition: all var(--timing-short) ease-in;
     }
 
     .viewchatcommands-panel__input:hover {
-        border-color: var(--color-border-input-hover);
+        box-shadow: inset 0 0 0 var(--border-width-input) var(--color-border-input-hover);
     }
-
+    
     .viewchatcommands-panel__input:focus {
-        border-color: var(--color-border-input-focus);
+        box-shadow: 0 0 0 var(--border-width-input) var(--color-border-input-focus),inset 0 0 0 var(--border-width-input) var(--color-border-input-focus);
+        outline-offset: -1px;
         background-color: var(--color-background-input-focus);
     }
 
@@ -167,7 +169,7 @@
         padding: .5rem;
     }
 
-    .viewchatcommands-loading {
+    .viewchatcommands-loading, .viewchatcommands-notfound {
         position: absolute;
         top: 0;
         display: flex;
@@ -177,6 +179,7 @@
         align-items: center;
         justify-content: center;
         flex-direction: column;
+        text-align: center;
         z-index: 12;
     }
 
@@ -188,13 +191,25 @@
         background-repeat: no-repeat;
     }
 
-    .viewchatcommands-loading .title {
+    .viewchatcommands-loading .title, .viewchatcommands-notfound .title {
         font-size: var(--font-size-4);
         font-weight: var(--font-weight-semibold);
     }
 
-    .viewchatcommands-load .text {
+    .viewchatcommands-load .text, .viewchatcommands-notfound .text {
         font-size: var(--font-size-5);
+    }
+
+    .viewchatcommands-notfound .icon {
+        width: 5rem;
+        height: 5rem;
+        background-image: url('https://cdn.7tv.app/emote/60f0ca3f48cde2fcc38c9e06/4x.webp');
+        background-size: contain;
+        background-repeat: no-repeat;
+    }
+
+    .viewchatcommands-panel:has(.viewchatcommands-notfound) {
+        overflow-y: hidden !important;
     }
     `
     document.head.appendChild(viewchatcommands_styles)
@@ -296,10 +311,23 @@
         // No support for gempbot - nowhere I can fetch their commands
     }
 
+    // Warning enums
     const botWarnings = {
         notConnectedToChannel: "This bot is not connected to the channel's chat, so you cannot use their commands here.",
         connectedToAccountNoCommands: "This channel authorized the bot with their account, but currently has not set up any commands.",
         notModerator: "This bot is not a moderator of this channel's chat, some commands may not work."
+    }
+
+    // Console outputs
+    // This is bad for debugging. Removing this later.
+    const output = {
+        prefix: '[TwitchViewBotCommands]',
+        log: function(msg) {
+            console.log(this.prefix, msg)
+        },
+        warn: function(msg)  {
+            console.warn(this.prefix, msg)
+        }
     }
 
     const getChatterList = async (channelName) => {
@@ -307,7 +335,8 @@
         const payload = {
             "operationName": "ChatViewers",
             "variables": {
-                "channelLogin": channelName,
+                // Twitch usernames (not display names!) are all lowercase
+                "channelLogin": channelName.toLowerCase(),
             },
             "extensions": {
                 "persistedQuery": {
@@ -356,11 +385,11 @@
                         await resp.json().then(async data => {
                             if ('channel' in data) {this.id[bot] = data.channel[botInfo.id_key]}
                             else if (botInfo.id_key in data) {this.id[bot] = data[botInfo.id_key]}
-                            else console.warn(`${this.channel} does not use ${bot}!`)
+                            else output.warn(`${this.channel} does not use ${bot}!`)
                         })
-                    } else { console.warn(`${this.channel} does not use ${bot}!`) }
+                    } else { output.warn(`${this.channel} does not use ${bot}!`) }
                 })
-                .catch(err => { console.warn(`${bot} did not return anything...`); console.warn(err) })
+                .catch(err => { output.warn(`${bot} did not return anything...`); output.warn(err) })
             }
             else throw `${bot} is not in the list of known bots...`
             return this.id[bot]
@@ -377,14 +406,14 @@
                             else if ('list' in data) this.cmds[bot] = data.list // Moobot
                             else { // StreamElements, Cloudbot
                                 this.cmds[bot] = data 
-                                console.warn(`${bot} did not return commands...`)
+                                // output.warn(`${bot} did not return commands...`)
                             }
                         })
                     }
                 })
-                .catch(err => { console.warn(`${bot} did not return commands...`) })
+                .catch(err => { output.warn(`${bot} did not return commands...`) })
             }
-            else console.warn(`${bot} ID not retrieved - do that before fetching commands.`)
+            else output.warn(`${bot} ID not retrieved - do that before fetching commands.`)
             return this.cmds[bot]
         }
 
@@ -401,9 +430,8 @@
             if (bot in this.bot_status) { return this.bot_status[bot] }
             let isConnected = false
             let roleOfBot = undefined
-            // There's an undocumented Twitch IRC server endpoint that returns usersnames, all in lowercase
-            // The endpoint itself doesn't support CORS, BRUH!!!!
-            // Using Cloudflare Workers to alleviate the issue
+            // To get a list of viewers in the chat, we use the GraphQL endpoint that Twitch uses
+            // Note that it doesn't return all chatters, so it'll definitely be a hit and miss.
             if (!this.viewer_list) {
                 this.viewer_list = await getChatterList(this.channel)
             }
@@ -422,17 +450,17 @@
     async function checkBotCommands(channel) {
         const channelCommands = (visitedChannels[channel] ? visitedChannels[channel] : new BotCommands(channel))
         visitedChannels[channel] = channelCommands
-        if (Object.keys(channelCommands.cmds).length === 0) { console.log('Checking commands'); await channelCommands.getFromAll() }
+        if (Object.keys(channelCommands.cmds).length === 0) { output.log('Checking commands'); await channelCommands.getFromAll() }
         for (const k of Object.keys(channelCommands.cmds)) { // Debug use
-            console.log(k) // Bot name
+            output.log(k) // Bot name
             // channelCommands.cmds[k].forEach(cmd => {
-            //    console.log(`${cmd[knownBots[k].cmd_name_key]}: ${cmd[knownBots[k].cmd_msg_key]}`)
+            //    output.log(`${cmd[knownBots[k].cmd_name_key]}: ${cmd[knownBots[k].cmd_msg_key]}`)
             // })
         }
     }
 
     async function createBotWarning(panelGroupElem, msg) {
-        console.log(msg)
+        output.log(msg)
         const botWarningModal = document.createElement('div')
         botWarningModal.classList.add('viewchatcommands-panel__group-warning')
         botWarningModal.innerText = msg
@@ -455,10 +483,10 @@
 
     async function renderCommandList() {
         // Create Container
-        const chatInputContainer = document.querySelector('.bGyiZe')
+        const chatInputContainer = document.querySelector('.chat-room__content')
         const commandListContainer = document.createElement('div')
         commandListContainer.classList.add('viewchatcommands-panel')
-        chatInputContainer.insertAdjacentElement('beforebegin', commandListContainer)
+        chatInputContainer.insertAdjacentElement('afterbegin', commandListContainer)
 
         // Change Header Text
         let chatHeader = document.querySelector('#chat-room-header-label')
@@ -469,7 +497,7 @@
         // Close Button
         const commandListCloseButton = document.createElement('div')
         commandListCloseButton.classList.add('viewchatcommands-button')
-        document.querySelector('.fFrDeB').insertAdjacentElement('afterbegin', commandListCloseButton)
+        document.querySelector('.dpXUHc').insertAdjacentElement('beforeend', commandListCloseButton)
         const childDiv = document.createElement('div')
         commandListCloseButton.append(childDiv)
         const childButton = document.createElement('button')
@@ -481,7 +509,7 @@
         // Add placeholder when loading commands
         const loadingPlaceholder = document.createElement('div')
         loadingPlaceholder.classList.add('viewchatcommands-loading')
-        chatInputContainer.insertAdjacentElement('beforebegin', loadingPlaceholder)
+        chatInputContainer.insertAdjacentElement('afterbegin', loadingPlaceholder)
         const loadingPlaceholderIcon = document.createElement('div')
         loadingPlaceholderIcon.classList.add('icon')
         loadingPlaceholder.append(loadingPlaceholderIcon)
@@ -496,16 +524,8 @@
         await checkBotCommands(currChannelName)
 
         // Render the commands in groups
-        const listSearchRegion = document.createElement('div')
-        listSearchRegion.classList.add('viewchatcommands-panel__group')
-        listSearchRegion.classList.add('filter')
-        commandListContainer.append(listSearchRegion)
-        const commandSearchBar = document.createElement('input')
-        commandSearchBar.classList.add('viewchatcommands-panel__input')
-        commandSearchBar.type = 'search'
-        commandSearchBar.placeholder = 'Filter'
-        listSearchRegion.append(commandSearchBar)
-
+        // Lazy variable to check if there are commands
+        let channelHasActiveCommands = false
         const currChannelCmds = visitedChannels[currChannelName].cmds
         for (const bot in currChannelCmds) {
             // Cloudbot: Even if broadcaster does not use the bot, 
@@ -514,6 +534,18 @@
             if (bot === "Streamlabs" && currChannelCmds[bot].filter(c => c[knownBots[bot].cmd_msg_key]).length === 0) {
                 continue
             }
+            // StreamElements: Commands can be disabled
+            // Skip entirely if no enabled commands.
+            if (bot === "StreamElements" && currChannelCmds[bot].filter(c => c.enabled === true).length === 0) {
+                continue
+            }
+            // Some bots will still return if no commands
+            // Pass if no commands.
+            if (currChannelCmds[bot].length === 0) {
+                continue
+            }
+            // If all of above is passed, it means there is at least one active command.
+            channelHasActiveCommands = true
             // Initialize group for each bot
             const individualBotListRegion = document.createElement('div')
             individualBotListRegion.classList.add('viewchatcommands-panel__group')
@@ -545,7 +577,7 @@
 
             // Create warning if criteria is met
             let { connected, role } = await visitedChannels[currChannelName].isBotConnected(bot)
-            console.log(bot)
+            output.log(bot)
             if (!connected) {
                 await createBotWarning(individualBotListRegion, botWarnings.notConnectedToChannel)
                 individualBotListRegion.classList.add('hidden')
@@ -573,11 +605,45 @@
                 }
                 const commandMessage = document.createElement('div')
                 commandMessage.classList.add('command-message')
-                commandMessage.innerText = `${cmd[knownBots[bot].cmd_msg_key]}`
+                commandMessage.innerHTML = `${cmd[knownBots[bot].cmd_msg_key].replaceAll(/(?:https?)[^ ]+/g, "<a href=\"$&\">$&</a>")}`
                 individualBotListRegion.append(commandWrapper)
                 commandWrapper.append(commandName)
                 commandWrapper.append(commandMessage)
             }
+        }
+
+        if (channelHasActiveCommands) {
+            // Create filter input
+            const listSearchRegion = document.createElement('div')
+            listSearchRegion.classList.add('viewchatcommands-panel__group')
+            listSearchRegion.classList.add('filter')
+            commandListContainer.insertAdjacentElement('afterbegin', listSearchRegion)
+            const commandSearchBar = document.createElement('input')
+            commandSearchBar.classList.add('viewchatcommands-panel__input')
+            commandSearchBar.type = 'search'
+            commandSearchBar.placeholder = 'Filter'
+            listSearchRegion.append(commandSearchBar)
+
+            // Activate it
+            commandSearchBar.oninput = async () => {
+                await filterCommandList(commandSearchBar.value)
+            }
+        } else {
+            // Create notice if no active commands.
+            const noCommandsNotice = document.createElement('div')
+            noCommandsNotice.classList.add('viewchatcommands-notfound')
+            commandListContainer.insertAdjacentElement('afterbegin', noCommandsNotice)
+            const noCommandsNoticeIcon = document.createElement('div')
+            noCommandsNoticeIcon.classList.add('icon')
+            noCommandsNotice.append(noCommandsNoticeIcon)
+            const noCommandsNoticeTitle = document.createElement('span')
+            noCommandsNoticeTitle.classList.add('title')
+            noCommandsNoticeTitle.innerText = 'No Commands Found'
+            noCommandsNotice.append(noCommandsNoticeTitle)
+            const noCommandsNoticeText = document.createElement('span')
+            noCommandsNoticeText.classList.add('text')
+            noCommandsNoticeText.innerText = 'This channel does not have active custom commands!'
+            noCommandsNotice.append(noCommandsNoticeText)
         }
 
         // Remove loading container
@@ -585,10 +651,6 @@
 
         // Garbage collect the viewer list
         visitedChannels[currChannelName].viewer_list = null
-
-        commandSearchBar.oninput = async () => {
-            await filterCommandList(commandSearchBar.value)
-        }
 
         childButton.onclick = async () => {
             await closeCommandList(commandListCloseButton, commandListContainer, chatHeaderText_Original)
@@ -603,8 +665,20 @@
         document.querySelector('button[data-test-selector="chat-viewer-list"]').removeAttribute("style")
     }
 
+    function isChatLoaded() {
+        const chatRoomExists = document.querySelector('.chat-room__content')
+        if (chatRoomExists) return true
+        else return false
+    }
+
+    function isButtonLoaded() {
+        const buttonExists = document.querySelector('.viewchatcommands-button')
+        if (buttonExists) return true
+        else return false
+    }
+
     function injectViewCommandsButton() {
-        const chatSendButton = document.querySelector('.hOyRCN .kaXoQh')
+        const chatSendButton = document.querySelector('.kEPLoI .jOVwMQ')
         const viewCommandsButton = document.createElement('div')
         viewCommandsButton.classList.add('viewchatcommands-button')
         chatSendButton.insertAdjacentElement('beforebegin', viewCommandsButton)
@@ -627,28 +701,46 @@
     // Storage for all the BotCommands objects, 
     // in case user switches back and forth between channels.
     let visitedChannels = {} 
-    console.log('Monitoring channel change')
+    output.log('Script initialized.')
 
     async function checkChannelName() {
         // channelName is given in the Twitch interface (unreliable)
         const currURL = document.URL
         const channelNameRegEx = [
-            /(?<=twitch.tv\/)(.+?)(?=[\/\?]|$)/,
-            /(?<=\/popout\/|\/embed\/|\/moderator\/)(.+?)(?=\/chat|\/|$)/
+            /(?<=\/popout\/|\/embed\/|\/moderator\/)(.+?)(?=\/chat|\/|$)/,
+            /(?<=twitch.tv\/)(?!popout|embed|moderator)(.+?)(?=[\/\?]|$)/
         ]
         for (const re of channelNameRegEx) {
             const reExec = re.exec(currURL)
             if (reExec === null) continue
             if (noCheckNames.includes(reExec[0])) { currChannelName = null; return }
             if (currChannelName !== reExec[0]) { 
-                console.log(`Channel changed to ${reExec[0]}`)
+                output.log(`Channel changed to ${reExec[0]}`)
                 currChannelName = reExec[0]
                 injectViewCommandsButton()
                 return
             }
+            else {
+                if (isChatLoaded() && !isButtonLoaded()) {
+                    injectViewCommandsButton()
+                    output.log('Button not found, reinjecting.')
+                }
+                return
+            }
         }
     }
-    // 7TV 3.0 lazy compatibility fix
-    // Wait for it to load first
-    setTimeout(() => setInterval(checkChannelName, 2000), 5500)
+
+    // Have to wait for 7TV to load first
+    setTimeout(() => {
+        if (window.seventv !== undefined) {
+            output.log("Cooling down for 7TV initialization...")
+            setTimeout(() => {
+                output.log("Cooldown complete.")
+                setInterval(checkChannelName, 2000)
+            }, 1000)
+        }
+        else setInterval(checkChannelName, 2000)
+    }, 2000)
+    
+    output.log('Monitoring channel change')
 })()
