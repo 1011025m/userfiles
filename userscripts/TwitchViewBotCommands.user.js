@@ -2,7 +2,7 @@
 // @name        View Twitch Commands In Chat
 // @namespace   https://github.com/1011025m
 // @match       https://www.twitch.tv/*
-// @version     0.8
+// @version     0.9
 // @author      1011025m
 // @description See all the available bot commands from popular bots that broadcasters use, from the comfort of your Twitch chat!
 // @icon        https://i.imgur.com/q4rNQOb.png
@@ -12,9 +12,6 @@
 // @downloadURL https://github.com/1011025m/userfiles/raw/main/userscripts/TwitchViewBotCommands.user.js
 // @unwrap
 // ==/UserScript==
-
-// TODO: :has() operator does not work on Firefox
-// NOTE: Above works starting with Firefox 121 - release in Dec 2023!
 (() => {
     'use strict'
 
@@ -33,7 +30,7 @@
         border-radius:.4rem;
         background-color: var(--color-background-button-text-hover);
     }
-    
+
     .viewchatcommands-button button {
         border:0;
         background:transparent;
@@ -86,17 +83,17 @@
         color: var(--color-text-input);
         border: 0;
         border-radius: var(--border-radius-medium);
-        box-shadow: inset 0 0 0 var(--border-width-input-small) var(--color-border-input);
+        box-shadow: inset 0 0 0 var(--input-border-width-small) var(--color-border-input);
         background-color: var(--color-background-input);
         transition: all var(--timing-short) ease-in;
     }
 
     .viewchatcommands-panel__input:hover {
-        box-shadow: inset 0 0 0 var(--border-width-input) var(--color-border-input-hover);
+        box-shadow: inset 0 0 0 var(--input-border-width-default) var(--color-border-input-hover);
     }
-    
+
     .viewchatcommands-panel__input:focus {
-        box-shadow: 0 0 0 var(--border-width-input) var(--color-border-input-focus),inset 0 0 0 var(--border-width-input) var(--color-border-input-focus);
+        box-shadow: 0 0 0 var(--input-border-width-default) var(--color-border-input-focus),inset 0 0 0 var(--input-border-width-default) var(--color-border-input-focus);
         outline-offset: -1px;
         background-color: var(--color-background-input-focus);
     }
@@ -146,7 +143,7 @@
         margin-bottom: 1rem;
     }
 
-    .viewchatcommands-panel:not(.filtered) .viewchatcommands-panel__group.hidden .command-wrapper, 
+    .viewchatcommands-panel:not(.filtered) .viewchatcommands-panel__group.hidden .command-wrapper,
     .command-wrapper.hidden {
         display: none;
     }
@@ -363,7 +360,7 @@
                 if (role === "count" || role === "__typename") continue
                 chattersArr[role] = resChatters[role].map(user => user.login)
             }
-    
+
             return {chatters: chattersArr}
         }
     }
@@ -405,7 +402,7 @@
                             if ('commands' in data) this.cmds[bot] = data.commands // Nightbot, Fossabot
                             else if ('list' in data) this.cmds[bot] = data.list // Moobot
                             else { // StreamElements, Cloudbot
-                                this.cmds[bot] = data 
+                                this.cmds[bot] = data
                                 // output.warn(`${bot} did not return commands...`)
                             }
                         })
@@ -497,7 +494,7 @@
         // Close Button
         const commandListCloseButton = document.createElement('div')
         commandListCloseButton.classList.add('viewchatcommands-button')
-        document.querySelector('.dpXUHc').insertAdjacentElement('beforeend', commandListCloseButton)
+        document.querySelector('.iprnST').insertAdjacentElement('beforeend', commandListCloseButton)
         const childDiv = document.createElement('div')
         commandListCloseButton.append(childDiv)
         const childButton = document.createElement('button')
@@ -528,7 +525,7 @@
         let channelHasActiveCommands = false
         const currChannelCmds = visitedChannels[currChannelName].cmds
         for (const bot in currChannelCmds) {
-            // Cloudbot: Even if broadcaster does not use the bot, 
+            // Cloudbot: Even if broadcaster does not use the bot,
             // if authenticated with Streamlabs, there will still be default commands.
             // Skip it entirely if only the moderator (default) commands are found.
             if (bot === "Streamlabs" && currChannelCmds[bot].filter(c => c[knownBots[bot].cmd_msg_key]).length === 0) {
@@ -678,7 +675,7 @@
     }
 
     function injectViewCommandsButton() {
-        const chatSendButton = document.querySelector('.kEPLoI .jOVwMQ')
+        const chatSendButton = document.querySelector('.iuYdvM .lnazSn')
         const viewCommandsButton = document.createElement('div')
         viewCommandsButton.classList.add('viewchatcommands-button')
         chatSendButton.insertAdjacentElement('beforebegin', viewCommandsButton)
@@ -698,9 +695,9 @@
 
     // Run
     let currChannelName = null
-    // Storage for all the BotCommands objects, 
+    // Storage for all the BotCommands objects,
     // in case user switches back and forth between channels.
-    let visitedChannels = {} 
+    let visitedChannels = {}
     output.log('Script initialized.')
 
     async function checkChannelName() {
@@ -714,7 +711,7 @@
             const reExec = re.exec(currURL)
             if (reExec === null) continue
             if (noCheckNames.includes(reExec[0])) { currChannelName = null; return }
-            if (currChannelName !== reExec[0]) { 
+            if (currChannelName !== reExec[0]) {
                 output.log(`Channel changed to ${reExec[0]}`)
                 currChannelName = reExec[0]
                 injectViewCommandsButton()
@@ -741,6 +738,6 @@
         }
         else setInterval(checkChannelName, 2000)
     }, 2000)
-    
+
     output.log('Monitoring channel change')
 })()
