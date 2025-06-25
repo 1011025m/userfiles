@@ -2,7 +2,7 @@
 // @name        View Twitch Commands In Chat
 // @namespace   https://github.com/1011025m
 // @match       https://www.twitch.tv/*
-// @version     0.9
+// @version     0.10
 // @author      1011025m
 // @description See all the available bot commands from popular bots that broadcasters use, from the comfort of your Twitch chat!
 // @icon        https://i.imgur.com/q4rNQOb.png
@@ -27,7 +27,7 @@
     }
 
     .viewchatcommands-button:hover {
-        border-radius:.4rem;
+        border-radius:50%;
         background-color: var(--color-background-button-text-hover);
     }
 
@@ -100,8 +100,9 @@
 
     .viewchatcommands-panel__group-header {
         display: flex !important;
+        align-items: center;
         width: 100%;
-        font-size: var(--font-size-4) !important;
+        font-size: var(--font-size-3) !important;
         font-weight: var(--font-weight-semibold) !important;
         padding: .5rem 0 .5rem 0 !important;
     }
@@ -149,11 +150,12 @@
     }
 
     .viewchatcommands-panel__group .command-wrapper .command-name {
-        font-size: var(--font-size-5);
+        font-size: var(--font-size-4);
         font-weight: bold;
     }
 
     .viewchatcommands-panel__group .command-wrapper .command-message {
+        font-size: var(--font-size-5);
         margin-left: 1rem;
     }
 
@@ -189,12 +191,12 @@
     }
 
     .viewchatcommands-loading .title, .viewchatcommands-notfound .title {
-        font-size: var(--font-size-4);
+        font-size: var(--font-size-3);
         font-weight: var(--font-weight-semibold);
     }
 
     .viewchatcommands-load .text, .viewchatcommands-notfound .text {
-        font-size: var(--font-size-5);
+        font-size: var(--font-size-4);
     }
 
     .viewchatcommands-notfound .icon {
@@ -449,7 +451,7 @@
         visitedChannels[channel] = channelCommands
         if (Object.keys(channelCommands.cmds).length === 0) { output.log('Checking commands'); await channelCommands.getFromAll() }
         for (const k of Object.keys(channelCommands.cmds)) { // Debug use
-            output.log(k) // Bot name
+            output.log(`Got commands for ${k}`) // Bot name
             // channelCommands.cmds[k].forEach(cmd => {
             //    output.log(`${cmd[knownBots[k].cmd_name_key]}: ${cmd[knownBots[k].cmd_msg_key]}`)
             // })
@@ -494,7 +496,7 @@
         // Close Button
         const commandListCloseButton = document.createElement('div')
         commandListCloseButton.classList.add('viewchatcommands-button')
-        document.querySelector('.iprnST').insertAdjacentElement('beforeend', commandListCloseButton)
+        document.querySelector('.stream-chat-header div:last-child').insertAdjacentElement('beforeend', commandListCloseButton)
         const childDiv = document.createElement('div')
         commandListCloseButton.append(childDiv)
         const childButton = document.createElement('button')
@@ -574,7 +576,7 @@
 
             // Create warning if criteria is met
             let { connected, role } = await visitedChannels[currChannelName].isBotConnected(bot)
-            output.log(bot)
+            output.log(`Checking status of ${bot}`)
             if (!connected) {
                 await createBotWarning(individualBotListRegion, botWarnings.notConnectedToChannel)
                 individualBotListRegion.classList.add('hidden')
@@ -598,7 +600,7 @@
                     commandName.innerText = `${knownBots[bot].enforced_prefix}${cmd[knownBots[bot].cmd_name_key]}:`
                 }
                 else {
-                    commandName.innerText = `${cmd[knownBots[bot].cmd_name_key]}:`
+                    commandName.innerText = `${cmd[knownBots[bot].cmd_name_key]}`
                 }
                 const commandMessage = document.createElement('div')
                 commandMessage.classList.add('command-message')
@@ -653,6 +655,7 @@
             await closeCommandList(commandListCloseButton, commandListContainer, chatHeaderText_Original)
         }
 
+        output.log("Render finished")
     }
 
     async function closeCommandList(closeButton, commandList, headerText) {
@@ -675,10 +678,10 @@
     }
 
     function injectViewCommandsButton() {
-        const chatSendButton = document.querySelector('.iuYdvM .lnazSn')
+        const chatButtonsRightContainer = document.querySelector('.chat-input__buttons-container div:has(button[data-a-target="chat-send-button"]) div:last-child')
         const viewCommandsButton = document.createElement('div')
         viewCommandsButton.classList.add('viewchatcommands-button')
-        chatSendButton.insertAdjacentElement('beforebegin', viewCommandsButton)
+        chatButtonsRightContainer.insertAdjacentElement('afterbegin', viewCommandsButton)
         const childDiv = document.createElement('div')
         viewCommandsButton.append(childDiv)
         const childButton = document.createElement('button')
