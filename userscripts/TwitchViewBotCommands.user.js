@@ -2,7 +2,7 @@
 // @name        View Twitch Commands In Chat
 // @namespace   https://github.com/1011025m
 // @match       https://www.twitch.tv/*
-// @version     0.10
+// @version     0.11
 // @author      1011025m
 // @description See all the available bot commands from popular bots that broadcasters use, from the comfort of your Twitch chat!
 // @icon        https://i.imgur.com/q4rNQOb.png
@@ -678,10 +678,10 @@
     }
 
     function injectViewCommandsButton() {
-        const chatButtonsRightContainer = document.querySelector('.chat-input__buttons-container div:has(button[data-a-target="chat-send-button"]) div:last-child')
+        const chatButtonsRightContainer = document.querySelector('.chat-input__buttons-container > div > div:has(button[data-a-target="chat-send-button"])')
         const viewCommandsButton = document.createElement('div')
         viewCommandsButton.classList.add('viewchatcommands-button')
-        chatButtonsRightContainer.insertAdjacentElement('afterbegin', viewCommandsButton)
+        chatButtonsRightContainer.insertAdjacentElement('beforebegin', viewCommandsButton)
         const childDiv = document.createElement('div')
         viewCommandsButton.append(childDiv)
         const childButton = document.createElement('button')
