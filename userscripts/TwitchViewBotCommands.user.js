@@ -2,7 +2,7 @@
 // @name        View Twitch Commands In Chat
 // @namespace   https://github.com/1011025m
 // @match       https://www.twitch.tv/*
-// @version     0.11
+// @version     0.12
 // @author      1011025m
 // @description See all the available bot commands from popular bots that broadcasters use, from the comfort of your Twitch chat!
 // @icon        https://i.imgur.com/q4rNQOb.png
@@ -575,6 +575,8 @@
             }
 
             // Create warning if criteria is met
+            // Disable until the script can somehow retrieve the view list
+            /*
             let { connected, role } = await visitedChannels[currChannelName].isBotConnected(bot)
             output.log(`Checking status of ${bot}`)
             if (!connected) {
@@ -587,6 +589,11 @@
             }
             else if (role !== 'moderator') {
                 await createBotWarning(individualBotListRegion, botWarnings.notModerator)
+            }
+            */
+            if (currChannelCmds[bot].length === 0) {
+                await createBotWarning(individualBotListRegion, botWarnings.connectedToAccountNoCommands)
+                individualBotListRegion.classList.add('hidden')
             }
 
             // Render each command
