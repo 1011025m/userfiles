@@ -7,7 +7,7 @@
 // @description See all the available bot commands from popular bots that broadcasters use, from the comfort of your Twitch chat!
 // @icon        https://i.imgur.com/q4rNQOb.png
 // @license     MIT
-// @home        https://github.com/1011025m/userfiles
+// @supportURL  https://github.com/1011025m/userfiles
 // @updateURL   https://github.com/1011025m/userfiles/raw/main/userscripts/TwitchViewBotCommands.user.js
 // @downloadURL https://github.com/1011025m/userfiles/raw/main/userscripts/TwitchViewBotCommands.user.js
 // @unwrap
@@ -685,10 +685,10 @@
     }
 
     function injectViewCommandsButton() {
-        const chatButtonsRightContainer = document.querySelector('.chat-input__buttons-container > div > div:has(button[data-a-target="chat-send-button"])')
+        const parentContainer = document.querySelector('[data-test-selector="chat-input-buttons-container"]');
+        const targetDiv = parentContainer.children[1];
         const viewCommandsButton = document.createElement('div')
         viewCommandsButton.classList.add('viewchatcommands-button')
-        chatButtonsRightContainer.insertAdjacentElement('beforebegin', viewCommandsButton)
         const childDiv = document.createElement('div')
         viewCommandsButton.append(childDiv)
         const childButton = document.createElement('button')
@@ -696,12 +696,13 @@
         const iconDiv = document.createElement('div')
         iconDiv.classList.add('open')
         childButton.append(iconDiv)
+        targetDiv.appendChild(viewCommandsButton);
+        viewCommandsButton.appendChild(childButton);
 
         childButton.onclick = async () => {
             await renderCommandList()
         }
     }
-
 
     // Run
     let currChannelName = null
