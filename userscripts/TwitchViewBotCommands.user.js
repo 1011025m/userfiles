@@ -2,7 +2,7 @@
 // @name        View Twitch Commands In Chat
 // @namespace   https://github.com/1011025m
 // @match       https://www.twitch.tv/*
-// @version     0.12
+// @version     0.13
 // @author      1011025m
 // @description See all the available bot commands from popular bots that broadcasters use, from the comfort of your Twitch chat!
 // @icon        https://i.imgur.com/q4rNQOb.png
@@ -19,7 +19,7 @@
     viewchatcommands_styles.innerText = `
     .viewchatcommands-button {
         cursor:pointer !important;
-        display:flex;
+        display:flex !important;
         justify-content:center;
         width:3rem;
         height:3rem;
@@ -685,10 +685,11 @@
     }
 
     function injectViewCommandsButton() {
-        const chatButtonsRightContainer = document.querySelector('.chat-input__buttons-container > div > div:has(button[data-a-target="chat-send-button"])')
+        // Find settings button
+        const chatSettingsButtonContainer = document.querySelector('div:has(>button[data-a-target="chat-settings"])')
+
         const viewCommandsButton = document.createElement('div')
         viewCommandsButton.classList.add('viewchatcommands-button')
-        chatButtonsRightContainer.insertAdjacentElement('beforebegin', viewCommandsButton)
         const childDiv = document.createElement('div')
         viewCommandsButton.append(childDiv)
         const childButton = document.createElement('button')
@@ -697,11 +698,12 @@
         iconDiv.classList.add('open')
         childButton.append(iconDiv)
 
+        chatSettingsButtonContainer.insertAdjacentElement('beforebegin', viewCommandsButton)
+
         childButton.onclick = async () => {
             await renderCommandList()
         }
     }
-
 
     // Run
     let currChannelName = null
